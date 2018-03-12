@@ -49,7 +49,7 @@ public class WordNet {
 
     // returns all WordNet nouns
     public Iterable<String> nouns() {
-        return null;
+        return new ArrayList<>(synToId.keySet());
     }
 
     // is the word a WordNet noun?
