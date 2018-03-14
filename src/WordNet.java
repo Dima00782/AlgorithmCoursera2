@@ -54,7 +54,7 @@ public class WordNet {
 
     // is the word a WordNet noun?
     public boolean isNoun(String word) {
-        return false;
+        return synToId.containsKey(word);
     }
 
     // distance between nounA and nounB (defined below)
