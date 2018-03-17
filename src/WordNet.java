@@ -1,12 +1,59 @@
 import edu.princeton.cs.algs4.In;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.Queue;
+import java.util.LinkedList;
 
 public class WordNet {
-    private Map<String, Integer> synToId = new TreeMap<>();
+    private Map<String, ArrayList<Integer>> synToId = new TreeMap<>();
     private ArrayList<ArrayList<Integer>> links = new ArrayList<>();
+
+    private int size() {
+        return links.size();
+    }
+
+    private class DirectedBFS {
+        private boolean[] marked;
+        private int[] distanceTo;
+        private int[] edgeTo;
+
+        public DirectedBFS(ArrayList<Integer> starts) {
+            marked = new boolean[size()];
+            distanceTo = new int[size()];
+            Arrays.fill(distanceTo, Integer.MAX_VALUE);
+            edgeTo = new int[size()];
+
+            bfs(starts);
+        }
+
+        private void bfs(ArrayList<Integer> starts) {
+            Queue<Integer> queue = new LinkedList<>();
+            for (Integer id : starts) {
+                marked[id] = true;
+                distanceTo[id] = 0;
+                queue.add(id);
+            }
+
+            while (!queue.isEmpty()) {
+                int current = queue.remove();
+                for (Integer neighbor : links.get(current)) {
+                    if (!marked[neighbor]) {
+                        queue.add(neighbor);
+                        edgeTo[neighbor] = current;
+                        distanceTo[neighbor] = Math.min(distanceTo[neighbor], distanceTo[current] + 1);
+                        marked[neighbor] = true;
+                    }
+                }
+            }
+        }
+
+        public int[] getDistanceTo() {
+            return distanceTo;
+        }
+    }
 
     // constructor takes the name of the two input files
     public WordNet(String synsets, String hypernyms) {
@@ -25,7 +72,10 @@ public class WordNet {
             int id = Integer.parseInt(data[0]);
             String[] synset = data[1].split("\\s+");
             for (String aSynset : synset) {
-                synToId.put(aSynset, id);
+                if (!synToId.containsKey(aSynset)) {
+                    synToId.put(aSynset, new ArrayList<>());
+                }
+                synToId.get(aSynset).add(id);
             }
 
             ++kSynsets;
@@ -59,7 +109,21 @@ public class WordNet {
 
     // distance between nounA and nounB (defined below)
     public int distance(String nounA, String nounB) {
-        return 0;
+        if (!isNoun(nounA) || !isNoun(nounB)) {
+            throw new IllegalArgumentException();
+        }
+        DirectedBFS bfsForA = new DirectedBFS(synToId.get(nounA));
+        DirectedBFS bfsForB = new DirectedBFS(synToId.get(nounB));
+
+        int[] distToA = bfsForA.getDistanceTo();
+        int[] distToB = bfsForB.getDistanceTo();
+        int min = Integer.MAX_VALUE;
+        for (int i = 0; i < distToA.length; ++i) {
+            if (distToA[i] != Integer.MAX_VALUE && distToB[i] != Integer.MAX_VALUE) {
+                min = Math.min(distToA[i] + distToB[i], min);
+            }
+        }
+        return min;
     }
 
     // a synset (second field of synsets.txt) that is the common ancestor of nounA and nounB
