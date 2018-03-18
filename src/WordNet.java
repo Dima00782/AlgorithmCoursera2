@@ -19,13 +19,11 @@ public class WordNet {
     private class DirectedBFS {
         private boolean[] marked;
         private int[] distanceTo;
-        private int[] edgeTo;
 
         public DirectedBFS(ArrayList<Integer> starts) {
             marked = new boolean[size()];
             distanceTo = new int[size()];
             Arrays.fill(distanceTo, Integer.MAX_VALUE);
-            edgeTo = new int[size()];
 
             bfs(starts);
         }
@@ -43,11 +41,7 @@ public class WordNet {
                 for (Integer neighbor : links.get(current)) {
                     if (!marked[neighbor]) {
                         queue.add(neighbor);
-                        // TODO: refactor -> delete edgeTo
-                        if (distanceTo[current] + 1 < distanceTo[neighbor]) {
-                            distanceTo[neighbor] = distanceTo[current] + 1;
-                            edgeTo[neighbor] = current;
-                        }
+                        distanceTo[neighbor] = Math.min(distanceTo[neighbor], distanceTo[current] + 1);
                         marked[neighbor] = true;
                     }
                 }
@@ -131,6 +125,9 @@ public class WordNet {
 
     // is the word a WordNet noun?
     public boolean isNoun(String word) {
+        if (word == null) {
+            throw new IllegalArgumentException();
+        }
         return synToId.containsKey(word);
     }
 
