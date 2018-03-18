@@ -9,6 +9,7 @@ import java.util.LinkedList;
 
 public class WordNet {
     private Map<String, ArrayList<Integer>> synToId = new TreeMap<>();
+    private Map<Integer, String> IdToSyn = new TreeMap<>();
     private ArrayList<ArrayList<Integer>> links = new ArrayList<>();
 
     private int size() {
@@ -42,8 +43,11 @@ public class WordNet {
                 for (Integer neighbor : links.get(current)) {
                     if (!marked[neighbor]) {
                         queue.add(neighbor);
-                        edgeTo[neighbor] = current;
-                        distanceTo[neighbor] = Math.min(distanceTo[neighbor], distanceTo[current] + 1);
+                        // TODO: refactor -> delete edgeTo
+                        if (distanceTo[current] + 1 < distanceTo[neighbor]) {
+                            distanceTo[neighbor] = distanceTo[current] + 1;
+                            edgeTo[neighbor] = current;
+                        }
                         marked[neighbor] = true;
                     }
                 }
@@ -70,6 +74,7 @@ public class WordNet {
             assert data.length == 3;
 
             int id = Integer.parseInt(data[0]);
+            IdToSyn.put(id, data[1]);
             String[] synset = data[1].split("\\s+");
             for (String aSynset : synset) {
                 if (!synToId.containsKey(aSynset)) {
@@ -97,6 +102,28 @@ public class WordNet {
         }
     }
 
+    private int[] leastCommonAncestorWithLength(String nounA, String nounB) {
+        if (nounA == null || nounB == null || !isNoun(nounA) || !isNoun(nounB)) {
+            throw new IllegalArgumentException();
+        }
+        DirectedBFS bfsForA = new DirectedBFS(synToId.get(nounA));
+        DirectedBFS bfsForB = new DirectedBFS(synToId.get(nounB));
+
+        int[] distToA = bfsForA.getDistanceTo();
+        int[] distToB = bfsForB.getDistanceTo();
+        int min = Integer.MAX_VALUE;
+        int leastCommonAncestor = -1;
+        for (int i = 0; i < distToA.length; ++i) {
+            if (distToA[i] != Integer.MAX_VALUE && distToB[i] != Integer.MAX_VALUE) {
+                if (distToA[i] + distToB[i] < min) {
+                    leastCommonAncestor = i;
+                    min = distToA[i] + distToB[i];
+                }
+            }
+        }
+        return new int[] {leastCommonAncestor, min};
+    }
+
     // returns all WordNet nouns
     public Iterable<String> nouns() {
         return new ArrayList<>(synToId.keySet());
@@ -109,27 +136,14 @@ public class WordNet {
 
     // distance between nounA and nounB (defined below)
     public int distance(String nounA, String nounB) {
-        if (!isNoun(nounA) || !isNoun(nounB)) {
-            throw new IllegalArgumentException();
-        }
-        DirectedBFS bfsForA = new DirectedBFS(synToId.get(nounA));
-        DirectedBFS bfsForB = new DirectedBFS(synToId.get(nounB));
-
-        int[] distToA = bfsForA.getDistanceTo();
-        int[] distToB = bfsForB.getDistanceTo();
-        int min = Integer.MAX_VALUE;
-        for (int i = 0; i < distToA.length; ++i) {
-            if (distToA[i] != Integer.MAX_VALUE && distToB[i] != Integer.MAX_VALUE) {
-                min = Math.min(distToA[i] + distToB[i], min);
-            }
-        }
-        return min;
+        return leastCommonAncestorWithLength(nounA, nounB)[1];
     }
 
     // a synset (second field of synsets.txt) that is the common ancestor of nounA and nounB
     // in a shortest ancestral path (defined below)
     public String sap(String nounA, String nounB) {
-        return null;
+        int lca = leastCommonAncestorWithLength(nounA, nounB)[0];
+        return IdToSyn.get(lca);
     }
 
     // do unit testing of this class
